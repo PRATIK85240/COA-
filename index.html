@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cache Memory Mapping: Direct, Associative, Set-Associative</title>
+  <meta name="description" content="A simple, interactive educational tool explaining Cache Memory Mapping (Direct Mapping, Fully Associative, and Set-Associative) with clear diagrams and examples.">
+  <link rel="stylesheet" href="cache-style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-badge">COA Tool</span>
+        <h1 class="brand-title">Cache Memory Mapping Visualizer</h1>
+      </div>
+      <nav class="header-nav">
+        <a href="#simulator" class="nav-btn active">Visualizer</a>
+        <a href="#concepts" class="nav-btn">Simple Concepts</a>
+        <a href="#comparison" class="nav-btn">Comparison</a>
+        <a href="#quiz" class="nav-btn">Quick Quiz</a>
+        <a href="cpu-cycle.html" class="nav-btn link-tool" title="Switch to CPU Instruction Cycle Tool">⚙️ CPU Cycle Tool &rarr;</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- Simple Intro Banner -->
+    <section class="intro-box">
+      <h2>How Does Main Memory (RAM) Map into Cache?</h2>
+      <p>
+        Main memory (RAM) is large but slow. Cache memory is super fast but small. 
+        <strong>Cache Mapping</strong> is the rule that decides <em>which cache slot a memory block is allowed to go into</em>.
+      </p>
+    </section>
+
+    <!-- SECTION 1: SIMULATOR -->
+    <section id="simulator" class="tool-section">
+      
+      <!-- Mapping Technique Tabs -->
+      <div class="mapping-selector" role="tablist" aria-label="Cache Mapping Techniques">
+        <button class="tab-btn active" id="tabDirect" role="tab" aria-selected="true" data-type="direct">
+          <span class="tab-num">1</span>
+          <span class="tab-label">Direct Mapping</span>
+          <span class="tab-desc">1 Fixed Line per Block</span>
+        </button>
+
+        <button class="tab-btn" id="tabAssociative" role="tab" aria-selected="false" data-type="associative">
+          <span class="tab-num">2</span>
+          <span class="tab-label">Fully Associative</span>
+          <span class="tab-desc">Any Empty Line</span>
+        </button>
+
+        <button class="tab-btn" id="tabSetAssoc" role="tab" aria-selected="false" data-type="set-associative">
+          <span class="tab-num">3</span>
+          <span class="tab-label">2-Way Set-Associative</span>
+          <span class="tab-desc">Assigned Set (2 Choices)</span>
+        </button>
+      </div>
+
+      <!-- Formula & Rule Box -->
+      <div class="rule-card" id="ruleCard">
+        <div class="rule-header">
+          <span class="rule-badge" id="ruleBadge">Direct Mapping Formula</span>
+          <span class="rule-sub" id="ruleSub">Fixed 1-to-1 Mapping</span>
+        </div>
+        <div class="rule-equation" id="ruleEquation">
+          Cache Line = (Block Number) mod (Number of Cache Lines)
+        </div>
+        <div class="rule-math-preview" id="ruleMathPreview">
+          Formula: <strong>Line = Block % 4</strong> &bull; Example: Block 6 &rarr; Line 2 (since 6 % 4 = 2)
+        </div>
+      </div>
+
+      <!-- Action & Input Controls -->
+      <div class="control-panel">
+        <div class="ctrl-group">
+          <label for="blockInput"><strong>Access a Memory Block:</strong></label>
+          <div class="input-action-row">
+            <input type="number" id="blockInput" value="6" min="0" max="15" aria-label="Memory Block Number (0 to 15)">
+            <button id="accessBtn" class="btn btn-primary">Access Block</button>
+            <button id="resetCacheBtn" class="btn btn-secondary">Clear Cache</button>
+          </div>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="presets-group">
+          <span class="preset-label">Try Example Sequences:</span>
+          <button class="preset-btn" data-seq="0,4,0,4">Demo: Conflict Thrashing (0, 4, 0, 4)</button>
+          <button class="preset-btn" data-seq="1,2,3,4">Demo: Sequential (1, 2, 3, 4)</button>
+          <button class="preset-btn" data-seq="6,7,6,10">Demo: Mix (6, 7, 6, 10)</button>
+        </div>
+      </div>
+
+      <!-- Live Access Result Banner (Hit / Miss) -->
+      <div class="status-banner" id="statusBanner">
+        <div class="status-icon" id="statusIcon">ℹ️</div>
+        <div class="status-details">
+          <h3 id="statusTitle">Ready for Access</h3>
+          <p id="statusMsg">Click any memory block below (or type a number 0–15) to see how it maps into cache.</p>
+        </div>
+        <div class="stats-counters">
+          <div class="stat-box">
+            <span class="stat-title">Hits</span>
+            <strong class="stat-val stat-hit" id="hitCount">0</strong>
+          </div>
+          <div class="stat-box">
+            <span class="stat-title">Misses</span>
+            <strong class="stat-val stat-miss" id="missCount">0</strong>
+          </div>
+          <div class="stat-box">
+            <span class="stat-title">Hit Rate</span>
+            <strong class="stat-val" id="hitRate">0%</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISUAL DIAGRAM: Main Memory & Cache Side-by-Side -->
+      <div class="diagram-grid">
+        
+        <!-- Left Column: Main Memory (RAM) -->
+        <div class="diagram-column memory-column">
+          <div class="column-header">
+            <h4>Main Memory (RAM)</h4>
+            <span class="col-sub">16 Blocks (Block 0 to Block 15)</span>
+          </div>
+          <p class="helper-text">Click any block to access it:</p>
+
+          <div class="memory-blocks-grid" id="memoryBlocksGrid">
+            <!-- Dynamically populated 16 blocks (0-15) -->
+          </div>
+        </div>
+
+        <!-- Middle Column: Dynamic Mapping Arrow & Math Breakdown -->
+        <div class="diagram-column bridge-column">
+          <div class="bridge-card">
+            <span class="bridge-tag">Address Translation</span>
+            <div class="address-split" id="addressSplit">
+              <div class="bit-chunk chunk-tag" id="bitTag">
+                <span class="chunk-name">Tag Bits</span>
+                <span class="chunk-val" id="valTagBits">--</span>
+              </div>
+              <div class="bit-chunk chunk-line" id="bitLine">
+                <span class="chunk-name" id="labelIndexBits">Line / Set Index</span>
+                <span class="chunk-val" id="valIndexBits">--</span>
+              </div>
+            </div>
+            
+            <div class="mapping-arrow-box">
+              <div class="arrow-line"></div>
+              <span class="arrow-text" id="arrowExplanation">Select a block</span>
+              <div class="arrow-head">&darr;</div>
+            </div>
+
+            <div class="mini-explanation" id="miniExplanation">
+              In <strong>Direct Mapping</strong>, 4 cache lines mean we take <code>Block # mod 4</code> to determine the exact cache line.
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Cache Memory -->
+        <div class="diagram-column cache-column">
+          <div class="column-header">
+            <h4>Cache Memory</h4>
+            <span class="col-sub" id="cacheSub">4 Cache Lines (Line 0 to Line 3)</span>
+          </div>
+
+          <div class="cache-lines-wrapper" id="cacheLinesWrapper">
+            <!-- Dynamically populated Cache Lines / Sets -->
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- SECTION 2: SIMPLE CONCEPTS EXPLAINED -->
+    <section id="concepts" class="concepts-section">
+      <div class="section-title-box">
+        <h3>Simple Beginner Explanations</h3>
+        <p>No complicated formulas — here is how to picture each technique in real life.</p>
+      </div>
+
+      <div class="concept-cards-grid">
+        <!-- Direct Mapping Card -->
+        <div class="concept-card">
+          <div class="concept-header direct-accent">
+            <span class="concept-icon">📌</span>
+            <h4>1. Direct Mapping</h4>
+          </div>
+          <p class="concept-summary">
+            <strong>Rule:</strong> Each memory block has <em>only one fixed slot</em> where it is allowed to live in the cache.
+          </p>
+          <div class="analogy-box">
+            <strong>Real-Life Analogy:</strong> Like an assigned seat in a classroom based on your roll number. If your roll number ends in 2, you MUST sit in Seat 2.
+          </div>
+          <ul class="concept-points">
+            <li><strong>Formula:</strong> <code>Cache Line = Block % Total Lines</code></li>
+            <li><strong>Pros:</strong> Extremely fast to look up (you only ever check one place!). Very cheap hardware.</li>
+            <li><strong>Cons:</strong> High conflict misses. If Block 0 and Block 4 are both used repeatedly, they keep kicking each other out of Line 0!</li>
+          </ul>
+        </div>
+
+        <!-- Fully Associative Card -->
+        <div class="concept-card">
+          <div class="concept-header assoc-accent">
+            <span class="concept-icon">🎯</span>
+            <h4>2. Fully Associative Mapping</h4>
+          </div>
+          <p class="concept-summary">
+            <strong>Rule:</strong> Any memory block can be stored in <em>any line</em> of the cache that happens to be free.
+          </p>
+          <div class="analogy-box">
+            <strong>Real-Life Analogy:</strong> Like parking in a public parking lot. You can park your car in any empty parking spot you see.
+          </div>
+          <ul class="concept-points">
+            <li><strong>Formula:</strong> No fixed slot. If full, it replaces the oldest/least used block (LRU).</li>
+            <li><strong>Pros:</strong> Zero conflict misses! Cache space is utilized to its maximum potential.</li>
+            <li><strong>Cons:</strong> Slow and expensive. The CPU must search every single line in parallel to see if the block is there.</li>
+          </ul>
+        </div>
+
+        <!-- Set-Associative Card -->
+        <div class="concept-card">
+          <div class="concept-header set-accent">
+            <span class="concept-icon">🔀</span>
+            <h4>3. Set-Associative Mapping</h4>
+          </div>
+          <p class="concept-summary">
+            <strong>Rule:</strong> The best of both worlds! Cache lines are grouped into <strong>Sets</strong>. A block maps to a specific Set, but can pick <em>any line inside that Set</em>.
+          </p>
+          <div class="analogy-box">
+            <strong>Real-Life Analogy:</strong> Reserved seating row at the movies. You are assigned to Row 2, but you can choose either Seat A or Seat B in that row.
+          </div>
+          <ul class="concept-points">
+            <li><strong>Formula:</strong> <code>Set Index = Block % Total Sets</code></li>
+            <li><strong>Pros:</strong> Greatly reduces conflict misses while keeping search hardware fast and affordable.</li>
+            <li><strong>Where used:</strong> Used in almost all modern computer CPUs (Intel, AMD, Apple M-series)!</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: COMPARISON TABLE -->
+    <section id="comparison" class="comparison-section">
+      <div class="section-title-box">
+        <h3>Comparison at a Glance</h3>
+        <p>A quick reference table summarizing how the three methods stack up.</p>
+      </div>
+
+      <div class="table-container">
+        <table class="simple-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Direct Mapping</th>
+              <th>Fully Associative</th>
+              <th>Set-Associative (e.g. 2-way)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Allowed Cache Lines</strong></td>
+              <td>Exactly 1 fixed line</td>
+              <td>Any line in the cache</td>
+              <td>Any line within assigned Set</td>
+            </tr>
+            <tr>
+              <td><strong>Search Speed</strong></td>
+              <td>⚡ Fastest (1 comparison)</td>
+              <td>🐢 Slowest (all lines compared)</td>
+              <td>⚡ Fast (compares only K lines)</td>
+            </tr>
+            <tr>
+              <td><strong>Hardware Cost</strong></td>
+              <td>💰 Lowest (simple circuit)</td>
+              <td>💰💰💰 Highest (many comparators)</td>
+              <td>💰💰 Balanced & practical</td>
+            </tr>
+            <tr>
+              <td><strong>Conflict Misses</strong></td>
+              <td>High (frequent thrashing)</td>
+              <td>Zero (none)</td>
+              <td>Low (drastically reduced)</td>
+            </tr>
+            <tr>
+              <td><strong>Real World Usage</strong></td>
+              <td>Simple microcontrollers</td>
+              <td>Small special caches (TLBs)</td>
+              <td>Main CPU Caches (L1, L2, L3)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 4: QUICK QUIZ -->
+    <section id="quiz" class="quiz-section">
+      <div class="section-title-box">
+        <h3>Quick 3-Question Knowledge Check</h3>
+        <p>Test your understanding of Direct, Associative, and Set-Associative mapping.</p>
+      </div>
+
+      <div class="quiz-box">
+        <div class="quiz-status-bar">
+          <span id="quizProgText">Question 1 of 3</span>
+          <span class="quiz-score-pill">Score: <strong id="quizScoreVal">0</strong> / 3</span>
+        </div>
+
+        <div id="quizQuestionBox">
+          <h4 class="quiz-q-title" id="quizQuestionTitle">Loading question...</h4>
+          <div class="quiz-choices" id="quizChoices">
+            <!-- Options injected dynamically -->
+          </div>
+
+          <div class="quiz-explanation hidden" id="quizExplanation">
+            <strong id="quizExplanationTitle">Correct!</strong>
+            <p id="quizExplanationText">Explanation details...</p>
+          </div>
+
+          <button id="nextQuizBtn" class="btn btn-primary hidden">Next Question &rarr;</button>
+        </div>
+
+        <div id="quizResultBox" class="quiz-result-view hidden">
+          <div class="trophy-icon">🏆</div>
+          <h4>Quiz Complete!</h4>
+          <p class="final-score-text">You scored <strong id="quizFinalScore">3</strong> out of 3!</p>
+          <p id="quizFinalComment" class="final-comment">You have mastered cache mapping concepts!</p>
+          <button id="restartQuizBtn" class="btn btn-secondary">Restart Quiz</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Clean Footer -->
+  <footer class="app-footer">
+    <div class="footer-inner">
+      <p><strong>Cache Memory Mapping Tool</strong> &bull; Simple, interactive learning tool for Computer Organization & Architecture students.</p>
+      <p class="footer-links">
+        <a href="cpu-cycle.html">Switch to CPU Instruction Cycle Tool</a> &bull; 
+        <a href="#simulator">Back to Top</a>
+      </p>
+    </div>
+  </footer>
+
+  <script src="cache.js"></script>
+</body>
+</html>
